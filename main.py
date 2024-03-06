@@ -99,6 +99,11 @@ async def sett(c: bot, m: Message):
         )
     else:
         set_chat_id(m, cmd[1], cmd[2])
+        await c.send_message(
+            chat_id=m.chat.id,
+            text=f"Success!! set from_chat_id:{cmd[1]} - to_chat_id:{cmd[2]}",
+            reply_to_message_id=m.id,
+        )
 
 
 @bot.on_message(filters.incoming)
