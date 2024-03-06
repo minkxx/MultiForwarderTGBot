@@ -18,9 +18,7 @@ bot = Client(
 )
 
 
-mongoClient = MongoClient(
-    "mongodb+srv://monsur:ag6nNLnj7JsGjft6@multi.sc3totr.mongodb.net/?retryWrites=true&w=majority&appName=multi"
-)
+mongoClient = MongoClient(MONGO_DB_URI)
 
 collection = mongoClient["chat_ids"]["ids"]
 
