@@ -1,0 +1,6 @@
+__pycache_/
+
+*.session
+*.session-journal
+
+config.py
