@@ -10,7 +10,7 @@ from multibot.decorators.owner_only import owner
 
 @bot.on_message(filters.command("start") & filters.private)
 async def start(c: bot, m: Message):
-    start_text = f"Hey! {m.from_user.mention}, welcome to @{BOT_USERNAME}.\nI'm a simple message forwarder bot from channel to channel based with Pyrogram.\nAny bugs? Report to developer.\n\nTo know more /help\n\nDeveloped by @minkxx69."
+    start_text = f"Hey! {m.from_user.mention}, welcome to @{BOT_USERNAME}.\nI'm a simple message forwarder bot from channel to channel based with pyrogram.\nAny bugs? Report to developer.\n\nTo know more /help\n\nDeveloped by @minkxx69."
     await c.send_message(
         chat_id=m.chat.id,
         text=start_text,

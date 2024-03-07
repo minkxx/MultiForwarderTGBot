@@ -2,6 +2,8 @@ __pycache__/
 
 *.session
 *.session-journal
+*.session-shm
+*.session-wal
 
 config.py
 test.py
