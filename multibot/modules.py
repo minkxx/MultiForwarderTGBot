@@ -3,13 +3,14 @@ from pyrogram.types import Message
 from pyrogram.enums import MessageMediaType
 
 from multibot import bot, BOT_USERNAME
-from multibot.database import set_chat_id, get_all_chats, get_all_users
+from multibot.database import set_chat_id, get_all_chats, get_all_users, add_user_db
 from multibot.decorators.forcesub import force_sub
 from multibot.decorators.owner_only import owner
 
 
 @bot.on_message(filters.command("start") & filters.private)
 async def start(c: bot, m: Message):
+    add_user_db(m.from_user.id)
     start_text = f"Hey! {m.from_user.mention}, welcome to @{BOT_USERNAME}.\nI'm a simple message forwarder bot from channel to channel based with pyrogram.\nAny bugs? Report to developer.\n\nTo know more /help\n\nDeveloped by @minkxx69."
     await c.send_message(
         chat_id=m.chat.id,
@@ -28,7 +29,7 @@ async def help(c: bot, m: Message):
     )
 
 
-@bot.on_message(filters.command("id") & filters.private)
+@bot.on_message(filters.command("id"))
 async def id(c: bot, m: Message):
     id_text = f"Chat id of {m.chat.title} is `{m.chat.id}`"
     await c.send_message(
