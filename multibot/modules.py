@@ -72,10 +72,23 @@ async def broadcast(c: bot, m: Message):
         )
     else:
         all_users = get_all_users()
+        done_count = 0
+        error_count = 0
         for user_id in all_users:
+            try:
+                await c.send_message(
+                    chat_id=user_id,
+                    text=" ".join(cmd[1:]),
+                )
+                done_count += 1
+            except Exception as e:
+                text = f"**Error!** while broadcasting message to user id : `{user_id}`"
+                await c.send_message(chat_id=m.chat.id, text=text)
+                error_count += 1
+        else:
             await c.send_message(
-                chat_id=user_id,
-                text=" ".join(cmd[1:]),
+                chat_id=m.chat.id,
+                text=f"**Successfully** broadcasted message to {done_count} chats out of {len(all_users)}.\n**Error** {error_count} chats",
             )
 
 
