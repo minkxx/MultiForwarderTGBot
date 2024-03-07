@@ -9,7 +9,6 @@ from multibot.decorators.owner_only import owner
 
 
 @bot.on_message(filters.command("start") & filters.private)
-@force_sub
 async def start(c: bot, m: Message):
     start_text = f"Hey! {m.from_user.mention}, welcome to @{BOT_USERNAME}.\nI'm a simple message forwarder bot from channel to channel based with Pyrogram.\nAny bugs? Report to developer.\n\nTo know more /help\n\nDeveloped by @minkxx69."
     await c.send_message(
@@ -20,7 +19,6 @@ async def start(c: bot, m: Message):
 
 
 @bot.on_message(filters.command("help") & filters.private)
-@force_sub
 async def help(c: bot, m: Message):
     help_text = f"**Help Menu - {BOT_USERNAME}**\n\nTo configure message forwarding from one channel to another you need to set two vars.\n\n**from_chat_id** : Chat id of the channel from which you want to forward message.\n**to_chat_id** : Chat id of the channel to which you want to forward your messages.\n\nAdd this bot to both your channel with admin rights and type `/id` to get id of the channels then return here and type `/set from_chat_id to_chat_id` replace from_chat_id and to_chat_id with your chat ids\n\nIf everything goes right you're all done."
     await c.send_message(
@@ -31,7 +29,6 @@ async def help(c: bot, m: Message):
 
 
 @bot.on_message(filters.command("id") & filters.private)
-@force_sub
 async def id(c: bot, m: Message):
     id_text = f"Chat id of {m.chat.title} is `{m.chat.id}`"
     await c.send_message(
@@ -42,7 +39,6 @@ async def id(c: bot, m: Message):
 
 
 @bot.on_message(filters.command("set") & filters.private)
-@force_sub
 async def sett(c: bot, m: Message):
     cmd = m.command
     if len(cmd) != 3:
