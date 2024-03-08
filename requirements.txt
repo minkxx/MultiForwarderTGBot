@@ -1,5 +1,5 @@
 pyrogram @ git+https://github.com/KurimuzonAkuma/pyrogram.git@v2.1.14
-pyroaddon
+pyromod
 TgCrypto
 flask
 gunicorn
