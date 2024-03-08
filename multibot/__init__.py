@@ -1,5 +1,6 @@
 import os
-from pyrogram import Client
+
+from pyromod import Client
 
 if os.path.exists("config.py"):
     from config import *
