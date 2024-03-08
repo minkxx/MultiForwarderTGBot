@@ -4,6 +4,7 @@ __pycache__/
 *.session-journal
 *.session-shm
 *.session-wal
+*.stackdump
 
 config.py
 test.py
