@@ -7,7 +7,7 @@ if os.path.exists("config.py"):
 else:
     from sample_config import *
 
-VERSION = "0.0.2"
+VERSION = "0.0.3"
 
 bot = Client(
     name="bot",

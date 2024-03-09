@@ -31,18 +31,29 @@ def set_chat_id(m: Message, from_chat_id: int, to_chat_id: int):
         collection.insert_one(toSendDoc)
 
 
-def get_all_chats():
+def get_all_chats(get_only_key=False, get_only_value=False):
     all_documents = collection.find()
     all_ = []
     all_chats = []
+    
+    if get_only_value:
+        for document in all_documents:
+            last_key, last_value = list(document.items())[-1]
+            all_.append(last_value)
+        for i in all_:
+            for j in i:
+                all_chats.append(j)
+        return all_chats
 
-    for document in all_documents:
-        last_key, last_value = list(document.items())[-1]
-        all_.append(last_value)
-    for i in all_:
-        for j in i:
-            all_chats.append(j)
-    return all_chats
+    elif get_only_key:
+        for document in all_documents:
+            last_key, last_value = list(document.items())[-1]
+            all_.append(last_key)
+        for i in all_:
+            all_chats.append(i)
+        return all_chats
+    else:
+        return False
 
 
 def add_user_db(user_id):
@@ -70,5 +81,15 @@ def get_all_users():
         for i in obj["all_users_list"]:
             all_datas.append(i)
         return all_datas
+    else:
+        return False
+
+
+def chats_of_user(user_id):
+    user_id = str(user_id)
+    obj_doc = {user_id: {"$exists": True}}
+    obj = collection.find_one(obj_doc)
+    if obj:
+        return obj[user_id]
     else:
         return False

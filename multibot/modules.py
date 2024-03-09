@@ -2,13 +2,21 @@ from pyrogram import filters
 from pyrogram.types import Message
 
 from multibot import bot, BOT_USERNAME, LOG_GROUP
-from multibot.database import set_chat_id, get_all_chats, get_all_users, add_user_db
+from multibot.database import (
+    set_chat_id,
+    get_all_chats,
+    get_all_users,
+    add_user_db,
+    chats_of_user,
+)
 from multibot.decorators.forcesub import force_sub
 from multibot.decorators.owner_only import owner
 from multibot.utils.cancel_msg import cancel_in_msg
 from multibot.utils.check_media_type import check_and_send
+from multibot.utils.get_user_info import get_user_info
 
 
+# Commands for all users
 @bot.on_message(filters.command("start") & filters.private)
 async def start(c: bot, m: Message):
     add_user_db(m.from_user.id)
@@ -18,6 +26,8 @@ async def start(c: bot, m: Message):
 Any bugs? Report to developer.**
 
 To know more /help
+
+For admins /admin_help
 
 Developed with 🩵 @minkxx69.
 Powered by @nrbots"""
@@ -93,14 +103,42 @@ async def sett(c: bot, m: Message):
     )
 
 
-@bot.on_message(filters.command("broadcast"))
+@bot.on_message(filters.incoming & filters.channel)
+async def get_incoming(c: bot, m: Message):
+    all_chats = get_all_chats(get_only_value=True)
+    for chat in all_chats:
+        if m.chat.id == int(chat["from_chat_id"]):
+            await check_and_send(m, c, int(chat["to_chat_id"]))
+
+
+# Commands for admins
+@bot.on_message(filters.command("admin_help") & filters.private)
+@owner
+async def admin_help(c: bot, m: Message):
+    help_text = f"""**⚙️ Admin Help Menu**
+
+💬 /broadcast - reply to a message or media to broadcast it to all users.
+
+💬 /stats - get all currently used users.
+💬 /stats __True__ - sends all stats to log group.
+
+💬 /get_user_chats __user_id__ - get all configured chats of the user id.
+
+💬 /config_users_info - sends all configured users info."""
+    await c.send_message(
+        chat_id=m.chat.id,
+        text=help_text,
+        reply_to_message_id=m.id,
+    )
+
+
+@bot.on_message(filters.command("broadcast") & filters.private)
 @owner
 async def broadcast(c: bot, m: Message):
-    cmd = m.command
     if not m.reply_to_message:
         await c.send_message(
             chat_id=m.chat.id,
-            text="Please reply to a message to broadcast!!",
+            text="**⚠️ Please reply to a message to broadcast!!**",
             reply_to_message_id=m.id,
         )
     else:
@@ -112,39 +150,88 @@ async def broadcast(c: bot, m: Message):
                 await check_and_send(m.reply_to_message, c, user_id)
                 done_count += 1
             except Exception as e:
-                text = f"**Error!** while broadcasting message to user id : `{user_id}`"
+                text = (
+                    f"**⚠️ Error!** while broadcasting message to user id : `{user_id}`"
+                )
                 await c.send_message(chat_id=m.chat.id, text=text)
                 error_count += 1
         else:
             await c.send_message(
                 chat_id=m.chat.id,
-                text=f"**Successfully** broadcasted message to {done_count} chats out of {len(all_users)}.\n**Error** {error_count} chats",
+                text=f"**✅ Successfully** broadcasted message to {done_count} chats out of {len(all_users)}.\n**⚠️ Error** {error_count} chats",
             )
 
 
 # todo : return every user in database to log group
-@bot.on_message(filters.command("stats"))
+@bot.on_message(filters.command("stats") & filters.private)
 @owner
 async def stats(c: bot, m: Message):
+    cmd = m.command
     all_users = get_all_users()
-    send_text = f"**Total** `{len(all_users)}` **users have used this bot so far.**\nListing all users ::>\n"
-    await c.send_message(
-        chat_id=m.chat.id,
-        text=f"Total `{len(all_users)}` users have used this bot so far.",
-        reply_to_message_id=m.id,
-    )
-    for i in all_users:
+    all_configured_users = get_all_chats(get_only_key=True)
+
+    send_text = f"**Total** `{len(all_users)}` **users have used this bot so far.\n\n**Listing users that have configured chats :\n"
+    for i in all_configured_users:
         send_text += f"\n- `{i}`"
 
-    await c.send_message(
-        chat_id=LOG_GROUP,
-        text=send_text,
-    )
+    if len(cmd) == 1:
+        await c.send_message(
+            chat_id=m.chat.id,
+            text=send_text,
+            reply_to_message_id=m.id,
+        )
+    else:
+        x = await c.send_message(
+            chat_id=m.chat.id,
+            text=f"**Sending** __stats__ **to log group...**",
+            reply_to_message_id=m.id,
+        )
+        await c.send_message(
+            chat_id=LOG_GROUP,
+            text=send_text,
+        )
+        await x.edit_text("**Sent!!**")
 
 
-@bot.on_message(filters.incoming & filters.channel)
-async def get_incoming(c: bot, m: Message):
-    all_chats = get_all_chats()
-    for chat in all_chats:
-        if m.chat.id == int(chat["from_chat_id"]):
-            await check_and_send(m, c, int(chat["to_chat_id"]))
+@bot.on_message(filters.command("get_user_chats") & filters.private)
+@owner
+async def get_user_chats(c: bot, m: Message):
+    cmd = m.command
+    if len(cmd) > 1:
+        all_chats = chats_of_user(cmd[1])
+        if all_chats:
+            text = f"**⚙️ Chats set by** {cmd[1]} :\n\n"
+            for chat in all_chats:
+                text += f"🔧 from_chat `{chat['from_chat_id']}` : to_chat `{chat['to_chat_id']}`\n"
+            await c.send_message(
+                chat_id=m.chat.id,
+                text=text,
+                reply_to_message_id=m.id,
+            )
+        else:
+            await c.send_message(
+                chat_id=m.chat.id,
+                text=f"**User** `{cmd[1]}` **have not set any chat yet!!**",
+                reply_to_message_id=m.id,
+            )
+    else:
+        await c.send_message(
+            chat_id=m.chat.id,
+            text="**⚠️ Please fill** __user_id__ **argument!!**",
+            reply_to_message_id=m.id,
+        )
+
+
+@bot.on_message(filters.command("config_users_info") & filters.private)
+@owner
+async def get_all_configured_users_info(c: bot, m: Message):
+    x = await c.send_message(chat_id=m.chat.id,text="👨🏻‍💻 __sending infos__",reply_to_message_id=m.id,)
+    
+    all_configured_users = get_all_chats(get_only_key=True)
+
+    for user_id in all_configured_users:
+        msg = await get_user_info(c, user_id)
+        await c.send_message(chat_id=m.chat.id,text=msg,)
+
+    await x.edit_text("**✅ Sent!!**")
+    
