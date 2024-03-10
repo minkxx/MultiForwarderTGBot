@@ -6,7 +6,6 @@ from multibot.database import (
     set_chat_id,
     get_all_chats,
     get_all_users,
-    add_user_db,
     chats_of_user,
 )
 from multibot.decorators.forcesub import force_sub
@@ -18,8 +17,8 @@ from multibot.utils.get_user_info import get_user_info
 
 # Commands for all users
 @bot.on_message(filters.command("start") & filters.private)
+@force_sub
 async def start(c: bot, m: Message):
-    add_user_db(m.from_user.id)
     start_text = f"""Hey! 🩷 {m.from_user.mention}, welcome to @{BOT_USERNAME}.
 
 **I'm a simple message forwarder bot from channel to channel based with pyrogram.
@@ -39,6 +38,7 @@ Powered by @nrbots"""
 
 
 @bot.on_message(filters.command("help") & filters.private)
+@force_sub
 async def help(c: bot, m: Message):
     help_text = f"""**Help Menu - {BOT_USERNAME} 🤖**
 
@@ -69,6 +69,7 @@ async def id(c: bot, m: Message):
 
 
 @bot.on_message(filters.command("set") & filters.private)
+@force_sub
 async def sett(c: bot, m: Message):
     await c.send_message(
         chat_id=m.chat.id,

@@ -3,6 +3,7 @@ from functools import wraps
 from pyrogram.types import Message
 
 from multibot import FORCE_SUB_CHANNEL
+from multibot.database import add_user_db
 
 
 async def you_must_join(client, m):
@@ -23,6 +24,7 @@ async def you_must_join(client, m):
 def force_sub(func):
     @wraps(func)
     async def wrapper(client, message: Message, *args, **kwargs):
+        add_user_db(message.from_user.id)
         members = [
             mem.user.id async for mem in client.get_chat_members(FORCE_SUB_CHANNEL)
         ]
