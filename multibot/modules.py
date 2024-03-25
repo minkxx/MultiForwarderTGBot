@@ -1,12 +1,19 @@
 from pyrogram import filters
-from pyrogram.types import Message
+from pyrogram import __version__ as PYRO_VERSION
+from pyrogram.types import (
+    Message,
+    CallbackQuery,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+)
 
-from multibot import bot, BOT_USERNAME, LOG_GROUP
+from multibot import bot, BOT_USERNAME, LOG_GROUP, VERSION, BOT_NAME
 from multibot.database import (
     set_chat_id,
     get_all_chats,
     get_all_users,
     chats_of_user,
+    remove_user_db,
 )
 from multibot.decorators.forcesub import force_sub
 from multibot.decorators.owner_only import owner
@@ -14,34 +21,70 @@ from multibot.utils.cancel_msg import cancel_in_msg
 from multibot.utils.check_media_type import check_and_send
 from multibot.utils.get_user_info import get_user_info
 
+global blocked_chats
+blocked_chats = []
+
+
+home_keyboard = InlineKeyboardMarkup(
+    [
+        [
+            InlineKeyboardButton(text="Help", callback_data="help_data"),
+            InlineKeyboardButton(text="About", callback_data="about_data"),
+        ],
+        [InlineKeyboardButton(text="Close", callback_data="close_data")],
+    ]
+)
+
+help_keyboard = InlineKeyboardMarkup(
+    [
+        [
+            InlineKeyboardButton(text="Home", callback_data="home_data"),
+            InlineKeyboardButton(text="About", callback_data="about_data"),
+        ],
+        [InlineKeyboardButton(text="Close", callback_data="close_data")],
+    ]
+)
+
+about_keyboard = InlineKeyboardMarkup(
+    [
+        [
+            InlineKeyboardButton(text="Home", callback_data="home_data"),
+            InlineKeyboardButton(text="Help", callback_data="help_data"),
+        ],
+        [InlineKeyboardButton(text="Close", callback_data="close_data")],
+    ]
+)
+
 
 # Commands for all users
 @bot.on_message(filters.command("start") & filters.private)
 @force_sub
 async def start(c: bot, m: Message):
+    global start_text
     start_text = f"""Hey! 🩷 {m.from_user.mention}, welcome to @{BOT_USERNAME}.
 
 **I'm a simple message forwarder bot from channel to channel based with pyrogram.
 Any bugs? Report to developer.**
 
-To know more /help
-
-For admins /admin_help
-
-Developed with 🩵 @minkxx69.
-Powered by @nrbots"""
+Developed with 🩵
+- @minkxx69"""
     await c.send_message(
         chat_id=m.chat.id,
         text=start_text,
         reply_to_message_id=m.id,
+        reply_markup=home_keyboard,
     )
 
 
-@bot.on_message(filters.command("help") & filters.private)
-@force_sub
-async def help(c: bot, m: Message):
-    help_text = f"""**Help Menu - {BOT_USERNAME} 🤖**
+@bot.on_callback_query(filters.regex("home_data"))
+async def help_cmd(c: bot, cbq: CallbackQuery):
+    await cbq.message.edit(text=start_text, reply_markup=home_keyboard)
 
+
+@bot.on_callback_query(filters.regex("help_data"))
+async def help_cmd(c: bot, cbq: CallbackQuery):
+    help_text = f"""**Help Menu - {BOT_USERNAME} 🤖**
+    
 **🔧 To configure message forwarding from one channel to another you need to set two vars.**
 - **from_chat_id** : Chat id of the channel from which you want to forward message.
 - **to_chat_id** : Chat id of the channel to which you want to forward your messages.
@@ -51,11 +94,26 @@ async def help(c: bot, m: Message):
 Enter `from_chat_id` and `to_chat_id` when asked.
 
 **If everything goes well you're all done 🤩**"""
-    await c.send_message(
-        chat_id=m.chat.id,
-        text=help_text,
-        reply_to_message_id=m.id,
-    )
+
+    await cbq.message.edit(text=help_text, reply_markup=help_keyboard)
+
+
+@bot.on_callback_query(filters.regex("about_data"))
+async def help_cmd(c: bot, cbq: CallbackQuery):
+    about_text = f"""**🤖 Bot Name :** `{BOT_NAME}`
+**🛠 Bot Version :** `{VERSION}`
+**⚒ Pyrogram Version :** `{PYRO_VERSION}`
+
+**Powered by ~** ❤️ @nrbots
+
+**Developed by ~** 🩵 @minkxx69
+"""
+    await cbq.message.edit(text=about_text, reply_markup=about_keyboard)
+
+
+@bot.on_callback_query(filters.regex("close_data"))
+async def help_cmd(c: bot, cbq: CallbackQuery):
+    await cbq.message.delete()
 
 
 @bot.on_message(filters.command("id"))
@@ -125,7 +183,9 @@ async def admin_help(c: bot, m: Message):
 
 💬 /get_user_chats __user_id__ - get all configured chats of the user id.
 
-💬 /config_users_info - sends all configured users info."""
+💬 /config_users_info - sends all configured users info.
+
+💬 /remove_blocked_users - remove users from db that have blocked this bot."""
     await c.send_message(
         chat_id=m.chat.id,
         text=help_text,
@@ -154,13 +214,34 @@ async def broadcast(c: bot, m: Message):
                 text = (
                     f"**⚠️ Error!** while broadcasting message to user id : `{user_id}`"
                 )
-                await c.send_message(chat_id=m.chat.id, text=text)
+                blocked_chats.append(user_id)
+                await c.send_message(chat_id=LOG_GROUP, text=text)
                 error_count += 1
         else:
             await c.send_message(
                 chat_id=m.chat.id,
                 text=f"**✅ Successfully** broadcasted message to {done_count} chats out of {len(all_users)}.\n**⚠️ Error** {error_count} chats",
             )
+
+
+@bot.on_message(filters.command("remove_blocked_users") & filters.private)
+@owner
+async def remove_blocked_users(c: bot, m: Message):
+    if len(blocked_chats) != 0:
+        x = await c.send_message(
+            chat_id=m.chat.id,
+            text="__Removing blocked users...__",
+        )
+        all_users = get_all_users()
+        for user_id in all_users:
+            if user_id in blocked_chats:
+                remove_user_db(user_id)
+        await x.edit_text("**✅ Done**")
+    else:
+        await c.send_message(
+            chat_id=m.chat.id,
+            text="**⚠️ List is empty. Please gather blocked user first!!**",
+        )
 
 
 # todo : return every user in database to log group
@@ -226,13 +307,19 @@ async def get_user_chats(c: bot, m: Message):
 @bot.on_message(filters.command("config_users_info") & filters.private)
 @owner
 async def get_all_configured_users_info(c: bot, m: Message):
-    x = await c.send_message(chat_id=m.chat.id,text="👨🏻‍💻 __sending infos__",reply_to_message_id=m.id,)
-    
+    x = await c.send_message(
+        chat_id=m.chat.id,
+        text="👨🏻‍💻 __sending infos__",
+        reply_to_message_id=m.id,
+    )
+
     all_configured_users = get_all_chats(get_only_key=True)
 
     for user_id in all_configured_users:
         msg = await get_user_info(c, user_id)
-        await c.send_message(chat_id=m.chat.id,text=msg,)
+        await c.send_message(
+            chat_id=m.chat.id,
+            text=msg,
+        )
 
     await x.edit_text("**✅ Sent!!**")
-    

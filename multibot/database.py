@@ -35,7 +35,7 @@ def get_all_chats(get_only_key=False, get_only_value=False):
     all_documents = collection.find()
     all_ = []
     all_chats = []
-    
+
     if get_only_value:
         for document in all_documents:
             last_key, last_value = list(document.items())[-1]
@@ -71,6 +71,19 @@ def add_user_db(user_id):
         data = [user_id]
         toSendDoc = {"all_users_list": data}
         users_collection.insert_one(toSendDoc)
+
+
+def remove_user_db(user_id: int):
+    obj_doc = {"all_users_list": {"$exists": True}}
+    obj = users_collection.find_one(obj_doc)
+    if obj:
+        all_datas = []
+        for i in obj["all_users_list"]:
+            all_datas.append(i)
+        if user_id in all_datas:
+            all_datas.remove(user_id)
+        updateQuery = {"$set": {"all_users_list": all_datas}}
+        users_collection.update_one(obj_doc, updateQuery)
 
 
 def get_all_users():

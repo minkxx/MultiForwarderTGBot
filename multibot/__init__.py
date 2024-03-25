@@ -7,7 +7,7 @@ if os.path.exists("config.py"):
 else:
     from sample_config import *
 
-VERSION = "0.0.3"
+VERSION = "0.0.5"
 
 bot = Client(
     name="bot",
@@ -19,5 +19,6 @@ bot = Client(
 bot.start()
 me = bot.get_me()
 BOT_USERNAME = me.username
+BOT_NAME = me.first_name + (me.last_name or "")
 
 from multibot.modules import *
