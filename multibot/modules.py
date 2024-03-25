@@ -6,6 +6,7 @@ from pyrogram.types import (
     InlineKeyboardMarkup,
     InlineKeyboardButton,
 )
+from pyrogram.errors import ChatAdminRequired
 
 from multibot import bot, BOT_USERNAME, LOG_GROUP, VERSION, BOT_NAME
 from multibot.database import (
@@ -20,6 +21,7 @@ from multibot.decorators.owner_only import owner
 from multibot.utils.cancel_msg import cancel_in_msg
 from multibot.utils.check_media_type import check_and_send
 from multibot.utils.get_user_info import get_user_info
+from multibot.utils.check_is_channel import bot_not_in_channel
 
 global blocked_chats
 blocked_chats = []
@@ -31,6 +33,7 @@ home_keyboard = InlineKeyboardMarkup(
             InlineKeyboardButton(text="Help", callback_data="help_data"),
             InlineKeyboardButton(text="About", callback_data="about_data"),
         ],
+        [InlineKeyboardButton(text="Github Repo", url="https://github.com/minkxx/MultiForwarderTgBot")],
         [InlineKeyboardButton(text="Close", callback_data="close_data")],
     ]
 )
@@ -41,6 +44,7 @@ help_keyboard = InlineKeyboardMarkup(
             InlineKeyboardButton(text="Home", callback_data="home_data"),
             InlineKeyboardButton(text="About", callback_data="about_data"),
         ],
+        [InlineKeyboardButton(text="Github Repo", url="https://github.com/minkxx/MultiForwarderTgBot")],
         [InlineKeyboardButton(text="Close", callback_data="close_data")],
     ]
 )
@@ -51,6 +55,7 @@ about_keyboard = InlineKeyboardMarkup(
             InlineKeyboardButton(text="Home", callback_data="home_data"),
             InlineKeyboardButton(text="Help", callback_data="help_data"),
         ],
+        [InlineKeyboardButton(text="Github Repo", url="https://github.com/minkxx/MultiForwarderTGBot")],
         [InlineKeyboardButton(text="Close", callback_data="close_data")],
     ]
 )
@@ -142,7 +147,9 @@ async def sett(c: bot, m: Message):
 
     if await cancel_in_msg(from_chat_id_msg):
         return
-    else:
+    elif await bot_not_in_channel(from_chat_id_msg):
+        return  
+    else:      
         from_chat_id = int(from_chat_id_msg.text)
 
     to_chat_id_msg = await c.ask(
@@ -151,6 +158,8 @@ async def sett(c: bot, m: Message):
     )
 
     if await cancel_in_msg(to_chat_id_msg):
+        return
+    elif await bot_not_in_channel(to_chat_id_msg):
         return
     else:
         to_chat_id = int(to_chat_id_msg.text)
@@ -167,7 +176,13 @@ async def get_incoming(c: bot, m: Message):
     all_chats = get_all_chats(get_only_value=True)
     for chat in all_chats:
         if m.chat.id == int(chat["from_chat_id"]):
-            await check_and_send(m, c, int(chat["to_chat_id"]))
+            try:
+                await check_and_send(m, c, int(chat["to_chat_id"]))
+            except ChatAdminRequired as err:
+                await c.send_message(
+                    chat_id=LOG_GROUP,
+                    text=f"**⚠️ Bot is not admin on chat :** `{chat['to_chat_id']}`",
+                )
 
 
 # Commands for admins
@@ -179,7 +194,6 @@ async def admin_help(c: bot, m: Message):
 💬 /broadcast - reply to a message or media to broadcast it to all users.
 
 💬 /stats - get all currently used users.
-💬 /stats __True__ - sends all stats to log group.
 
 💬 /get_user_chats __user_id__ - get all configured chats of the user id.
 
@@ -206,22 +220,22 @@ async def broadcast(c: bot, m: Message):
         all_users = get_all_users()
         done_count = 0
         error_count = 0
+        error_text = f"**⚠️ Unable! to broadcast on these chats **"
         for user_id in all_users:
             try:
                 await check_and_send(m.reply_to_message, c, user_id)
                 done_count += 1
             except Exception as e:
-                text = (
-                    f"**⚠️ Error!** while broadcasting message to user id : `{user_id}`"
-                )
+                error_text += f"\n `{user_id}`"
                 blocked_chats.append(user_id)
-                await c.send_message(chat_id=LOG_GROUP, text=text)
                 error_count += 1
         else:
             await c.send_message(
                 chat_id=m.chat.id,
                 text=f"**✅ Successfully** broadcasted message to {done_count} chats out of {len(all_users)}.\n**⚠️ Error** {error_count} chats",
             )
+        if error_count:
+            await c.send_message(chat_id=m.chat.id, text=error_text)
 
 
 @bot.on_message(filters.command("remove_blocked_users") & filters.private)
@@ -244,7 +258,6 @@ async def remove_blocked_users(c: bot, m: Message):
         )
 
 
-# todo : return every user in database to log group
 @bot.on_message(filters.command("stats") & filters.private)
 @owner
 async def stats(c: bot, m: Message):
