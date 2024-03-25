@@ -1,0 +1,2 @@
+worker: python3 -m multibot
+web: python3 app.py 
