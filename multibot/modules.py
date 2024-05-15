@@ -340,7 +340,7 @@ async def broadcast(c: bot, m: Message):
                 await c.copy_message(
                     chat_id=user_id,
                     from_chat_id=m.chat.id,
-                    message_id = m.id
+                    message_id = m.reply_to_message.id
                 )
                 done_count += 1
             except Exception as e:
