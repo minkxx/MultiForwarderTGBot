@@ -5,6 +5,7 @@ __pycache__/
 *.session-shm
 *.session-wal
 *.stackdump
+*.env
 
 config.py
 test.py

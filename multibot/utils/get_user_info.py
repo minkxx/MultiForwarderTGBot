@@ -8,7 +8,7 @@ async def get_user_info(c, user_id):
         text = f"**⚠️ unable to fetch `{user_id}` info.**"
         return text
 
-    full_name = user.first_name + (user.last_name or "")
+    full_name = user.full_name
     user_id = user.id
     username = user.username
     dc_id = user.dc_id or "1"

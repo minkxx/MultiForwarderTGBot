@@ -12,7 +12,7 @@ collection = mongoClient["chat_ids"]["ids"]
 users_collection = mongoClient["users"]["user_ids"]
 
 
-def set_chat_id(m: Message, from_chat_id: int, to_chat_id: int):
+def set_chat_id(m, from_chat_id: int, to_chat_id: int):
     user_id = str(m.from_user.id)
     data = {"from_chat_id": int(from_chat_id), "to_chat_id": int(to_chat_id)}
     obj_doc = {user_id: {"$exists": True}}
@@ -30,6 +30,18 @@ def set_chat_id(m: Message, from_chat_id: int, to_chat_id: int):
         toSendDoc = {user_id: data}
         collection.insert_one(toSendDoc)
 
+def remove_chat_id(user_id: int, chat_index:int):
+    user_id = str(user_id)
+    obj_doc = {user_id: {"$exists": True}}
+    obj = collection.find_one(obj_doc)
+    user_chats:list = obj[user_id]
+    try:
+        removed_chat = user_chats.pop(chat_index)
+    except IndexError as ie:
+        return
+    updateQuery = {"$set": {user_id: user_chats}}
+    collection.update_one(obj_doc, updateQuery)
+    return removed_chat
 
 def get_all_chats(get_only_key=False, get_only_value=False):
     all_documents = collection.find()
