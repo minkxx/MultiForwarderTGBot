@@ -4,3 +4,4 @@ TgCrypto
 flask
 gunicorn
 pymongo
+python_dotenv
