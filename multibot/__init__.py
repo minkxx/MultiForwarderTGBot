@@ -7,7 +7,7 @@ from pyromod import Client
 load_dotenv()
 
 
-VERSION = "0.1.0"
+VERSION = "0.1.1"
 
 
 API_ID = int(os.getenv("API_ID"))
