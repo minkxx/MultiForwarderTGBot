@@ -22,17 +22,11 @@ from multibot.decorators.owner_only import owner
 from multibot.utils.cancel_msg import cancel_in_msg
 from multibot.utils.get_user_info import get_user_info
 from multibot.utils.check_is_channel import bot_not_in_channel
+from multibot.utils.ikb import ikb
 
 global blocked_chats
 blocked_chats = []
 
-start_text = """Hey! 🩷 {}, welcome to @{}.
-
-**I'm a simple message forwarder bot from channel to channel based with pyrogram.
-Any bugs? Report to developer.**
-
-Developed with 🩵
-- @minkxx69"""
 
 home_keyboard = InlineKeyboardMarkup(
     [
@@ -91,12 +85,15 @@ about_keyboard = InlineKeyboardMarkup(
     ]
 )
 
-
 delete_chats_keyboard = InlineKeyboardMarkup(
     [
         [InlineKeyboardButton(text="Delete Chat", callback_data="delete_chat_data")],
-        [InlineKeyboardButton(text="Close", callback_data="home_data")]
+        [InlineKeyboardButton(text="Back", callback_data="home_data")],
     ]
+)
+
+close_keyboard = InlineKeyboardMarkup(
+    [[InlineKeyboardButton(text="Back", callback_data="home_data")]]
 )
 
 
@@ -105,7 +102,13 @@ delete_chats_keyboard = InlineKeyboardMarkup(
 @force_sub
 async def start(c: bot, m: Message):
     global start_text
-    start_text = start_text.format(m.from_user.full_name, BOT_USERNAME)
+    start_text = f"""Hey! 🩷 {m.from_user.full_name}, welcome to @{BOT_USERNAME}.
+
+**I'm a simple message forwarder bot from channel to channel based with pyrogram.
+Any bugs? Report to developer.**
+
+Developed with 🩵
+- @minkxx69"""
     await c.send_message(
         chat_id=m.chat.id,
         text=start_text,
@@ -164,15 +167,20 @@ async def help_cmd(c: bot, cbq: CallbackQuery):
         chat_text = "**Your Configured Chats**\n\n"
         count = 1
         if all_chats:
-                for chat in all_chats:
-                    chat_text += f"{count}. 🔧 from_chat `{chat['from_chat_id']}` : to_chat `{chat['to_chat_id']}`\n\n"
-                    count += 1
-        await c.send_message(chat_id=cbq.message.chat.id, text=chat_text, reply_markup=delete_chats_keyboard)
+            for chat in all_chats:
+                chat_text += f"{count}. 🔧 from_chat `{chat['from_chat_id']}` : to_chat `{chat['to_chat_id']}`\n\n"
+                count += 1
+        await cbq.message.edit(text=chat_text, reply_markup=delete_chats_keyboard)
+
+        # await c.send_message(chat_id=cbq.message.chat.id, text=chat_text, reply_markup=delete_chats_keyboard)
     else:
-        await c.send_message(
-            chat_id=cbq.message.chat.id,
-            text="You haven't configured any chat yet!"
-            )
+        await cbq.message.edit(
+            text="You haven't configured any chat yet!", reply_markup=close_keyboard
+        )
+        # await c.send_message(
+        #     chat_id=cbq.message.chat.id,
+        #     text="You haven't configured any chat yet!"
+        #     )
 
 
 @bot.on_callback_query(filters.regex("set_chat_data"))
@@ -215,22 +223,28 @@ async def help_cmd(c: bot, cbq: CallbackQuery):
 
 @bot.on_callback_query(filters.regex("delete_chat_data"))
 async def help_cmd(c: bot, cbq: CallbackQuery):
-    chat_msg = await c.ask(
-        chat_id=cbq.message.chat.id,
-        text=f"**Enter your chat serial no to delete**\n/cancel - cancel the process.",
-    )
-    if await cancel_in_msg(chat_msg):
-        return
-    elif not chat_msg.text.isdigit():
-        return
-    else:
-        chat_index = int(chat_msg.text)
+    global buttons_dict
+    buttons_dict = {}
 
-    deleted_chat = remove_chat_id(cbq.from_user.id, chat_index-1)
-    if deleted_chat:
-        await cbq.message.edit(text=f"**Deleted**\n{chat_index}. from_chat_id:{deleted_chat['from_chat_id']} - to_chat_id:{deleted_chat['from_chat_id']}")
-    else:
-        await c.send_message(chat_id=cbq.message.chat.id, text=f"'{chat_index}' is not valid serial no!")
+    all_chats = chats_of_user(cbq.from_user.id)
+    if all_chats and len(all_chats) != 0:
+        chat_text = "**Select the button below according to your chat serial no. to delete.**\n\n"
+        count = 1
+        if all_chats:
+            for chat in all_chats:
+                chat_text += f"{count}. 🔧 from_chat `{chat['from_chat_id']}` : to_chat `{chat['to_chat_id']}`\n\n"
+                buttons_dict[f"{count}"] = f"delete=index={count-1}"
+                count += 1
+
+        del_keyboard = ikb(buttons_dict, 6)
+        await cbq.message.edit(text=chat_text, reply_markup=del_keyboard)
+
+
+@bot.on_callback_query(filters.regex(pattern="^(delete=index=.*)$"))
+async def help_cmd(c: bot, cbq: CallbackQuery):
+    chat_index = int(cbq.data.split("=")[-1])
+    deleted_chat = remove_chat_id(cbq.from_user.id, chat_index)
+    await cbq.message.edit(text=f"**Deleted**\n{chat_index+1}. from_chat_id:{deleted_chat['from_chat_id']} - to_chat_id:{deleted_chat['from_chat_id']}", reply_markup=close_keyboard)
 
 @bot.on_message(filters.command("id"))
 async def id(c: bot, m: Message):
@@ -281,6 +295,7 @@ async def sett(c: bot, m: Message):
         text=f"**✅ Successfully set\n**from_chat_id : **`{from_chat_id}` : **to_chat_id : **`{to_chat_id}`",
     )
 
+
 @bot.on_message(filters.incoming & filters.channel)
 async def get_incoming(c: bot, m: Message):
     all_chats = get_all_chats(get_only_value=True)
@@ -290,8 +305,8 @@ async def get_incoming(c: bot, m: Message):
                 await c.copy_message(
                     chat_id=int(chat["to_chat_id"]),
                     from_chat_id=int(chat["from_chat_id"]),
-                    message_id = m.id
-                    )
+                    message_id=m.id,
+                )
             except ChatAdminRequired as err:
                 await c.send_message(
                     chat_id=LOG_GROUP,
@@ -331,23 +346,28 @@ async def broadcast(c: bot, m: Message):
             reply_to_message_id=m.id,
         )
     else:
+        msg = await c.send_message(chat_id=m.chat.id, text="`Starting broadcast..`")
         all_users = get_all_users()
         done_count = 0
         error_count = 0
         error_text = f"**⚠️ Unable! to broadcast on these chats **"
         for user_id in all_users:
+            msg.edit_text(f"Sending broadcast to user: `{user_id}`")
             try:
                 await c.copy_message(
                     chat_id=user_id,
                     from_chat_id=m.chat.id,
-                    message_id = m.reply_to_message.id
+                    message_id=m.reply_to_message.id,
                 )
                 done_count += 1
+                msg.edit_text(f"Broadcast sent to user: `{user_id}`")
             except Exception as e:
                 error_text += f"\n `{user_id}`"
                 blocked_chats.append(user_id)
                 error_count += 1
+                msg.edit_text(f"Unable broadcast to user: `{user_id}`")
         else:
+            msg.delete()
             await c.send_message(
                 chat_id=m.chat.id,
                 text=f"**✅ Successfully** broadcasted message to {done_count} chats out of {len(all_users)}.\n**⚠️ Error** {error_count} chats",
