@@ -12,7 +12,12 @@ from multibot.database import *
 
 @bot.on_message(filters.command("id"))
 async def id(c: bot, m: Message):
-    id_text = f"**Chat id of** {m.chat.title} **is** `{m.chat.id}`"
+    if m.chat.title:
+        chat_title = m.chat.title
+    else:
+        chat_title = m.from_user.full_name
+
+    id_text = f"**Chat id of** {chat_title} **is** `{m.chat.id}`"
     await c.send_message(
         chat_id=m.chat.id,
         text=id_text,

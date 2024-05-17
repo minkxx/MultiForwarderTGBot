@@ -176,23 +176,25 @@ async def get_all_configured_users_info(c: bot, m: Message):
 @bot.on_message(filters.command("user_chats_link") & filters.private)
 @owner
 async def user_chats_link(c: bot, m: Message):
-    msg = await c.send_message(
-            chat_id=m.chat.id, 
-            text="__Fetching links please wait...__"
-        )
+    msg = await c.send_message(chat_id=m.chat.id, text="__Fetching links please wait...__")
     chats_list = [chat[chat_id] for chat in get_all_chats(get_only_value=True) for chat_id in chat]
     if len(m.command) <= 1:
         join_text = "Here are the links:\n\n"
+        error_text = "Errors while fetching invite links of user chats\n"
         for chat_id in chats_list:
             try:
                 join_link = await c.export_chat_invite_link(chat_id)
                 join_text += f"{join_link}\n"
             except Exception as e:
                 join_text += f"unable to fetch invite link: `{chat_id}`\n"
+                error_text += f"Error on chat: `{chat_id}`\n```{e}``` \n\n"
                 continue
         
         await c.send_message(
             chat_id=m.chat.id, text=join_text, disable_web_page_preview=True
+        )
+        await c.send_message(
+            chat_id=LOG_GROUP, text=error_text
         )
     else:
         user_chat_id = int(m.command[1])
