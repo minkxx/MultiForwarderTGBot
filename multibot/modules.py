@@ -313,6 +313,26 @@ async def get_incoming(c: bot, m: Message):
                     text=f"**⚠️ Bot is not admin on chat :** `{chat['to_chat_id']}`",
                 )
 
+@bot.on_message(filters.command("user_chats_link") & filters.private)
+@owner
+async def user_chats_link(c: bot, m: Message):
+    all_chats = get_all_chats(get_only_value=True)
+    join_text = "Here are the links:\n\n"
+    for chat in all_chats:
+        for chat_id in chat:
+            try:
+                join_link = await c.export_chat_invite_link(chat[chat_id])
+                join_text += f"{join_link}\n"
+            except Exception as e:
+                join_text += f"unable to fetch invite link: `{chat[chat_id]}`\n"
+                continue
+
+    await c.send_message(
+            chat_id=m.chat.id,
+            text=join_text,
+            disable_web_page_preview=True
+        )
+
 
 # Commands for admins
 @bot.on_message(filters.command("admin_help") & filters.private)
@@ -352,7 +372,7 @@ async def broadcast(c: bot, m: Message):
         error_count = 0
         error_text = f"**⚠️ Unable! to broadcast on these chats **"
         for user_id in all_users:
-            msg.edit_text(f"Sending broadcast to user: `{user_id}`")
+            await msg.edit_text(f"Sending broadcast to user: `{user_id}`")
             try:
                 await c.copy_message(
                     chat_id=user_id,
@@ -360,14 +380,14 @@ async def broadcast(c: bot, m: Message):
                     message_id=m.reply_to_message.id,
                 )
                 done_count += 1
-                msg.edit_text(f"Broadcast sent to user: `{user_id}`")
+                await msg.edit_text(f"Broadcast sent to user: `{user_id}`")
             except Exception as e:
                 error_text += f"\n `{user_id}`"
                 blocked_chats.append(user_id)
                 error_count += 1
-                msg.edit_text(f"Unable broadcast to user: `{user_id}`")
+                await msg.edit_text(f"Unable broadcast to user: `{user_id}`")
         else:
-            msg.delete()
+            await msg.delete()
             await c.send_message(
                 chat_id=m.chat.id,
                 text=f"**✅ Successfully** broadcasted message to {done_count} chats out of {len(all_users)}.\n**⚠️ Error** {error_count} chats",
