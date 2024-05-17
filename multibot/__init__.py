@@ -53,5 +53,3 @@ bot.start()
 me = bot.get_me()
 BOT_USERNAME = me.username
 BOT_NAME = me.full_name
-
-from multibot.modules import *
