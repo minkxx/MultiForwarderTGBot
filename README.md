@@ -44,7 +44,7 @@ MultiForwarderTGBot is a Telegram bot designed to forward messages from multiple
 
 1. Start the bot:
     ```sh
-    python bot.py
+    python -m multibot
     ```
 
 2. Follow the instructions provided by the bot to configure the channels and destination.
