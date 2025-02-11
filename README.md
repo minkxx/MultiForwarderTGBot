@@ -9,7 +9,7 @@ MultiForwarderTGBot is a Telegram bot designed to forward messages from multiple
 
 ### Get it [Here](https://t.me/MultiForwarderRoBot)
 
-## Setup Instructions
+## Setup Instructions 
 
 ### Prerequisites
 - Python 3.8 or higher
@@ -37,7 +37,13 @@ MultiForwarderTGBot is a Telegram bot designed to forward messages from multiple
 
 4. Create a `.env` file in the root directory and add your Telegram bot token:
     ```env
-    BOT_TOKEN=your_telegram_bot_token
+    API_ID=your_telegram_api_id
+    API_HASH=your_telegram_api_hash
+    BOT_TOKEN=your_telegram_bot_tokeb
+    MONGO_DB_URI=your_mongo_db_uri
+    LOG_GROUP=your_telegram_log_group_id
+    ADMIN_USERS_ID=admin_id admin_id admin_id
+    FORCE_SUB_CHANNEL=your_must_join_telegram_channel_id
     ```
 
 ### Running the Bot

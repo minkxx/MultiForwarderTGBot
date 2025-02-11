@@ -1,14 +1,14 @@
 from pyrogram import filters
 from pyrogram.types import Message
+from pyrogram.errors import FloodWait
 
 from multibot import bot, LOG_GROUP
 from multibot.decorators.owner_only import owner
 from multibot.utils.get_user_info import get_user_info
 from multibot.database import *
-
+import asyncio
 
 blocked_chats = []
-
 
 @bot.on_message(filters.command("admin_help") & filters.private)
 @owner
@@ -48,8 +48,13 @@ async def broadcast(c: bot, m: Message):
         done_count = 0
         error_count = 0
         error_text = f"**⚠️ Unable! to broadcast on these chats **"
-        for user_id in all_users:
-            await msg.edit_text(f"Sending broadcast to user: `{user_id}`")
+        
+        # Define the maximum number of concurrent tasks to avoid overloading the bot
+        CONCURRENT_TASKS = 10
+
+        # Helper function to send a message to a user
+        async def send_to_user(user_id):
+            nonlocal done_count, error_count, error_text
             try:
                 await c.copy_message(
                     chat_id=user_id,
@@ -57,18 +62,40 @@ async def broadcast(c: bot, m: Message):
                     message_id=m.reply_to_message.id,
                 )
                 done_count += 1
-                await msg.edit_text(f"Broadcast sent to user: `{user_id}`")
+            except FloodWait as FWE:
+                # Handle flood wait (retry after waiting)
+                await msg.edit_text(f"Flood Wait: `{FWE.value} seconds`")
+                await asyncio.sleep(FWE.value)
+                await send_to_user(user_id)  # Retry after wait
             except Exception as e:
+                # Log error
                 error_text += f"\n `{user_id}`"
                 blocked_chats.append(user_id)
                 error_count += 1
-                await msg.edit_text(f"Unable broadcast to user: `{user_id}`")
-        else:
-            await msg.delete()
-            await c.send_message(
-                chat_id=m.chat.id,
-                text=f"**✅ Successfully** broadcasted message to {done_count} chats out of {len(all_users)}.\n**⚠️ Error** {error_count} chats",
-            )
+
+        # List of tasks to be processed concurrently
+        tasks = []
+        for user_id in all_users:
+            task = send_to_user(user_id)
+            tasks.append(task)
+
+            # When there are enough tasks, wait for them to finish
+            if len(tasks) >= CONCURRENT_TASKS:
+                await asyncio.gather(*tasks)
+                tasks = []  # Reset tasks after a batch
+                await asyncio.sleep(1)  # Small delay between batches to avoid hitting rate limits
+
+        # Process remaining tasks if any
+        if tasks:
+            await asyncio.gather(*tasks)
+
+        # Final message and summary
+        await msg.delete()
+        await c.send_message(
+            chat_id=m.chat.id,
+            text=f"**✅ Successfully** broadcasted message to {done_count} chats out of {len(all_users)}.\n**⚠️ Error** {error_count} chats",
+        )
+
         if error_count:
             await c.send_message(chat_id=m.chat.id, text=error_text)
 
