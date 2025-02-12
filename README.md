@@ -1,4 +1,4 @@
-# MultiForwarderTGBot
+# [MultiForwarderTGBot](https://t.me/MultiForwarderRoBot)
 
 MultiForwarderTGBot is a Telegram bot designed to forward messages from multiple channels to a single destination. This bot helps you manage and consolidate messages efficiently.
 
